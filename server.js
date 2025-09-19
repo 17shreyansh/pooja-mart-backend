@@ -15,7 +15,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? 'your-frontend-domain.com' : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production' ? 'https://pooja-mart.vercel.app' : 'http://localhost:5173',
   credentials: true
 }));
 

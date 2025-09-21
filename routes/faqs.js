@@ -6,7 +6,17 @@ const auth = require('../middleware/auth');
 // Get all FAQs (public)
 router.get('/', async (req, res) => {
   try {
-    const faqs = await FAQ.find({ isActive: true }).sort({ order: 1, createdAt: 1 });
+    const { entityType, entityId } = req.query;
+    const filter = { isActive: true };
+    
+    if (entityType && entityId) {
+      filter.entityType = entityType;
+      filter.entityId = entityId;
+    } else if (entityType) {
+      filter.entityType = entityType;
+    }
+    
+    const faqs = await FAQ.find(filter).sort({ order: 1, createdAt: 1 });
     res.json({
       success: true,
       data: faqs
@@ -40,15 +50,26 @@ router.get('/admin', auth, async (req, res) => {
 // Create FAQ (admin)
 router.post('/', auth, async (req, res) => {
   try {
-    const { question, answer, order } = req.body;
+    const { question, answer, order, entityType, entityId, entityModel } = req.body;
     
     const faq = new FAQ({
       question,
       answer,
-      order: order || 0
+      order: order || 0,
+      entityType: entityType || 'general',
+      entityId,
+      entityModel
     });
 
     await faq.save();
+    
+    // If FAQ is linked to an entity, add it to the entity's FAQ array
+    if (entityId && entityModel) {
+      const Model = require(`../models/${entityModel}`);
+      await Model.findByIdAndUpdate(entityId, {
+        $addToSet: { faqs: faq._id }
+      });
+    }
     
     res.status(201).json({
       success: true,
@@ -67,18 +88,34 @@ router.post('/', auth, async (req, res) => {
 // Update FAQ (admin)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { question, answer, order, isActive } = req.body;
+    const { question, answer, order, isActive, entityType, entityId, entityModel } = req.body;
     
-    const faq = await FAQ.findByIdAndUpdate(
-      req.params.id,
-      { question, answer, order, isActive },
-      { new: true, runValidators: true }
-    );
-    
-    if (!faq) {
+    const oldFaq = await FAQ.findById(req.params.id);
+    if (!oldFaq) {
       return res.status(404).json({
         success: false,
         message: 'FAQ not found'
+      });
+    }
+    
+    const faq = await FAQ.findByIdAndUpdate(
+      req.params.id,
+      { question, answer, order, isActive, entityType, entityId, entityModel },
+      { new: true, runValidators: true }
+    );
+    
+    // Handle entity reference changes
+    if (oldFaq.entityId && oldFaq.entityModel) {
+      const OldModel = require(`../models/${oldFaq.entityModel}`);
+      await OldModel.findByIdAndUpdate(oldFaq.entityId, {
+        $pull: { faqs: faq._id }
+      });
+    }
+    
+    if (entityId && entityModel) {
+      const NewModel = require(`../models/${entityModel}`);
+      await NewModel.findByIdAndUpdate(entityId, {
+        $addToSet: { faqs: faq._id }
       });
     }
     
@@ -99,7 +136,7 @@ router.put('/:id', auth, async (req, res) => {
 // Delete FAQ (admin)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const faq = await FAQ.findByIdAndDelete(req.params.id);
+    const faq = await FAQ.findById(req.params.id);
     
     if (!faq) {
       return res.status(404).json({
@@ -107,6 +144,16 @@ router.delete('/:id', auth, async (req, res) => {
         message: 'FAQ not found'
       });
     }
+    
+    // Remove FAQ reference from entity
+    if (faq.entityId && faq.entityModel) {
+      const Model = require(`../models/${faq.entityModel}`);
+      await Model.findByIdAndUpdate(faq.entityId, {
+        $pull: { faqs: faq._id }
+      });
+    }
+    
+    await FAQ.findByIdAndDelete(req.params.id);
     
     res.json({
       success: true,

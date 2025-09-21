@@ -56,10 +56,33 @@ router.get('/admin', auth, async (req, res) => {
   }
 });
 
+// Get service by slug (must be before /:id route)
+router.get('/slug/:slug', async (req, res) => {
+  try {
+    const service = await Service.findOne({ slug: req.params.slug, isActive: true })
+      .populate({
+        path: 'faqs',
+        match: { isActive: true },
+        options: { sort: { order: 1, createdAt: 1 } }
+      });
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    res.json({ success: true, data: service });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get service by ID
 router.get('/:id', async (req, res) => {
   try {
-    const service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id)
+      .populate({
+        path: 'faqs',
+        match: { isActive: true },
+        options: { sort: { order: 1, createdAt: 1 } }
+      });
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -106,6 +129,22 @@ router.delete('/:id', auth, async (req, res) => {
   try {
     await Service.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'Service deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get FAQs for a specific service
+router.get('/:id/faqs', async (req, res) => {
+  try {
+    const FAQ = require('../models/FAQ');
+    const faqs = await FAQ.find({ 
+      entityType: 'service', 
+      entityId: req.params.id, 
+      isActive: true 
+    }).sort({ order: 1, createdAt: 1 });
+    
+    res.json({ success: true, data: faqs });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

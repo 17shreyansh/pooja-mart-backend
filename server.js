@@ -65,6 +65,7 @@ app.use('/api/faqs', require('./routes/faqs'));
 app.use('/api/pages', require('./routes/pages'));
 app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/search', require('./routes/search'));
+app.use('/api/offers', require('./routes/offers'));
 
 // Serve admin panel
 app.use(express.static('public'));

@@ -6,11 +6,6 @@ const testimonialSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  author: {
-    type: String,
-    required: true,
-    trim: true
-  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -29,7 +24,7 @@ const testimonialSchema = new mongoose.Schema({
   },
   isApproved: {
     type: Boolean,
-    default: false
+    default: true
   }
 }, {
   timestamps: true

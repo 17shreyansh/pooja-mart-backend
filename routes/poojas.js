@@ -60,14 +60,13 @@ router.get('/admin', auth, async (req, res) => {
 router.get('/slug/:slug', async (req, res) => {
   try {
     const pooja = await Pooja.findOne({ slug: req.params.slug, isActive: true })
-      .populate('services collections')
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+      .populate('services collections');
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
+    }
+    // Sort FAQs by order
+    if (pooja.faqs && pooja.faqs.length > 0) {
+      pooja.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: pooja });
   } catch (error) {
@@ -79,14 +78,13 @@ router.get('/slug/:slug', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const pooja = await Pooja.findById(req.params.id)
-      .populate('services collections')
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+      .populate('services collections');
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
+    }
+    // Sort FAQs by order
+    if (pooja.faqs && pooja.faqs.length > 0) {
+      pooja.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: pooja });
   } catch (error) {
@@ -97,7 +95,7 @@ router.get('/:id', async (req, res) => {
 // Create pooja
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, services, collections, isActive } = req.body;
+    const { title, description, category, services, collections, faqs, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
     const pooja = new Pooja({ 
@@ -107,6 +105,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       image, 
       services: services ? JSON.parse(services) : [],
       collections: collections ? JSON.parse(collections) : [],
+      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     });
     await pooja.save();
@@ -120,13 +119,14 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update pooja
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, services, collections, isActive } = req.body;
+    const { title, description, category, services, collections, faqs, isActive } = req.body;
     const updateData = { 
       title, 
       description, 
       category, 
       services: services ? JSON.parse(services) : [],
       collections: collections ? JSON.parse(collections) : [],
+      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     };
     
@@ -151,20 +151,6 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// Get FAQs for a specific pooja
-router.get('/:id/faqs', async (req, res) => {
-  try {
-    const FAQ = require('../models/FAQ');
-    const faqs = await FAQ.find({ 
-      entityType: 'pooja', 
-      entityId: req.params.id, 
-      isActive: true 
-    }).sort({ order: 1, createdAt: 1 });
-    
-    res.json({ success: true, data: faqs });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+
 
 module.exports = router;

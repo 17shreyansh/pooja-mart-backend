@@ -30,8 +30,20 @@ const serviceSchema = new mongoose.Schema({
     required: true
   },
   faqs: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'FAQ'
+    question: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    answer: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    order: {
+      type: Number,
+      default: 0
+    }
   }],
   isActive: {
     type: Boolean,

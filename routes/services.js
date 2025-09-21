@@ -59,14 +59,13 @@ router.get('/admin', auth, async (req, res) => {
 // Get service by slug (must be before /:id route)
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const service = await Service.findOne({ slug: req.params.slug, isActive: true })
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+    const service = await Service.findOne({ slug: req.params.slug, isActive: true });
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    // Sort FAQs by order
+    if (service.faqs && service.faqs.length > 0) {
+      service.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: service });
   } catch (error) {
@@ -77,14 +76,13 @@ router.get('/slug/:slug', async (req, res) => {
 // Get service by ID
 router.get('/:id', async (req, res) => {
   try {
-    const service = await Service.findById(req.params.id)
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+    const service = await Service.findById(req.params.id);
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    // Sort FAQs by order
+    if (service.faqs && service.faqs.length > 0) {
+      service.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: service });
   } catch (error) {
@@ -95,10 +93,18 @@ router.get('/:id', async (req, res) => {
 // Create service
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, isActive } = req.body;
+    const { title, description, category, price, faqs, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
-    const service = new Service({ title, description, category, image, price, isActive });
+    const service = new Service({ 
+      title, 
+      description, 
+      category, 
+      image, 
+      price, 
+      faqs: faqs ? JSON.parse(faqs) : [],
+      isActive 
+    });
     await service.save();
     
     res.status(201).json({ success: true, data: service });
@@ -110,8 +116,15 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update service
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, isActive } = req.body;
-    const updateData = { title, description, category, price, isActive };
+    const { title, description, category, price, faqs, isActive } = req.body;
+    const updateData = { 
+      title, 
+      description, 
+      category, 
+      price, 
+      faqs: faqs ? JSON.parse(faqs) : [],
+      isActive 
+    };
     
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
@@ -134,20 +147,6 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// Get FAQs for a specific service
-router.get('/:id/faqs', async (req, res) => {
-  try {
-    const FAQ = require('../models/FAQ');
-    const faqs = await FAQ.find({ 
-      entityType: 'service', 
-      entityId: req.params.id, 
-      isActive: true 
-    }).sort({ order: 1, createdAt: 1 });
-    
-    res.json({ success: true, data: faqs });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+
 
 module.exports = router;

@@ -24,7 +24,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
-// app.use('/api/', limiter);
+app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -33,21 +33,36 @@ app.use(express.urlencoded({ extended: true }));
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
+// Validate required environment variables
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is required');
+  process.exit(1);
+}
+
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+  console.error('ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required');
+  process.exit(1);
+}
+
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('MongoDB connected successfully');
     
-    // Create default admin if not exists
-    const adminExists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
-    if (!adminExists) {
-      const admin = new Admin({
-        email: process.env.ADMIN_EMAIL,
-        password: process.env.ADMIN_PASSWORD,
-        name: 'Admin'
-      });
-      await admin.save();
-      console.log('Default admin created');
+    try {
+      // Create default admin if not exists
+      const adminExists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
+      if (!adminExists) {
+        const admin = new Admin({
+          email: process.env.ADMIN_EMAIL,
+          password: process.env.ADMIN_PASSWORD,
+          name: 'Admin'
+        });
+        await admin.save();
+        console.log('Default admin created');
+      }
+    } catch (error) {
+      console.error('Error creating default admin:', error.message);
     }
   })
   .catch(err => console.error('MongoDB connection error:', err));

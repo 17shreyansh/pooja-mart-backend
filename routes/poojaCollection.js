@@ -59,14 +59,13 @@ router.get('/admin', auth, async (req, res) => {
 // Get collection by slug (must be before /:id route)
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const collection = await PoojaCollection.findOne({ slug: req.params.slug, isActive: true })
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+    const collection = await PoojaCollection.findOne({ slug: req.params.slug, isActive: true });
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
+    // Sort FAQs by order
+    if (collection.faqs && collection.faqs.length > 0) {
+      collection.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: collection });
   } catch (error) {
@@ -77,14 +76,13 @@ router.get('/slug/:slug', async (req, res) => {
 // Get collection by ID
 router.get('/:id', async (req, res) => {
   try {
-    const collection = await PoojaCollection.findById(req.params.id)
-      .populate({
-        path: 'faqs',
-        match: { isActive: true },
-        options: { sort: { order: 1, createdAt: 1 } }
-      });
+    const collection = await PoojaCollection.findById(req.params.id);
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
+    // Sort FAQs by order
+    if (collection.faqs && collection.faqs.length > 0) {
+      collection.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: collection });
   } catch (error) {
@@ -95,7 +93,7 @@ router.get('/:id', async (req, res) => {
 // Create pooja collection item
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, stock, attributes, isActive } = req.body;
+    const { title, description, category, price, stock, attributes, faqs, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
     const collection = new PoojaCollection({ 
@@ -106,6 +104,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       price,
       stock: stock || 0,
       attributes: attributes ? JSON.parse(attributes) : [],
+      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     });
     await collection.save();
@@ -119,7 +118,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update pooja collection item
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, stock, attributes, isActive } = req.body;
+    const { title, description, category, price, stock, attributes, faqs, isActive } = req.body;
     const updateData = { 
       title, 
       description, 
@@ -127,6 +126,7 @@ router.put('/:id', auth, upload.single('image'), async (req, res) => {
       price,
       stock: stock || 0,
       attributes: attributes ? JSON.parse(attributes) : [],
+      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     };
     
@@ -151,20 +151,6 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// Get FAQs for a specific collection
-router.get('/:id/faqs', async (req, res) => {
-  try {
-    const FAQ = require('../models/FAQ');
-    const faqs = await FAQ.find({ 
-      entityType: 'collection', 
-      entityId: req.params.id, 
-      isActive: true 
-    }).sort({ order: 1, createdAt: 1 });
-    
-    res.json({ success: true, data: faqs });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+
 
 module.exports = router;

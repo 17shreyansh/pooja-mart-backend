@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -39,7 +39,7 @@ router.get('/admin', auth, async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -56,13 +56,26 @@ router.get('/admin', auth, async (req, res) => {
   }
 });
 
+// Get service by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    res.json({ success: true, data: service });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Create service
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle, category, isActive } = req.body;
+    const { title, description, category, price, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
-    const service = new Service({ title, subtitle, category, image, isActive });
+    const service = new Service({ title, description, category, image, price, isActive });
     await service.save();
     
     res.status(201).json({ success: true, data: service });
@@ -74,8 +87,8 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update service
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle, category, isActive } = req.body;
-    const updateData = { title, subtitle, category, isActive };
+    const { title, description, category, price, isActive } = req.body;
+    const updateData = { title, description, category, price, isActive };
     
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;

@@ -6,12 +6,7 @@ const poojaCollectionSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  subtitle1: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  subtitle2: {
+  description: {
     type: String,
     required: true,
     trim: true
@@ -25,6 +20,28 @@ const poojaCollectionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  price: {
+    type: Number,
+    required: true
+  },
+  stock: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  attributes: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    value: {
+      type: String,
+      required: true,
+      trim: true
+    }
+  }],
   isActive: {
     type: Boolean,
     default: true

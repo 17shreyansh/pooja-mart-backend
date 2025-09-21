@@ -24,7 +24,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
-app.use('/api/', limiter);
+// app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -54,6 +54,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/user-auth', require('./routes/userAuth'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/poojas', require('./routes/poojas'));
 app.use('/api/pooja-collection', require('./routes/poojaCollection'));

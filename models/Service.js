@@ -6,7 +6,7 @@ const serviceSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  subtitle: {
+  description: {
     type: String,
     required: true,
     trim: true
@@ -18,6 +18,10 @@ const serviceSchema = new mongoose.Schema({
   },
   image: {
     type: String,
+    required: true
+  },
+  price: {
+    type: Number,
     required: true
   },
   isActive: {

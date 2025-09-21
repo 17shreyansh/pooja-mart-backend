@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
       filter.category = category;
     }
     
-    const poojas = await Pooja.find(filter).sort({ createdAt: -1 });
+    const poojas = await Pooja.find(filter).populate('services collections').sort({ createdAt: -1 });
     const categories = await Pooja.distinct('category', { isActive: true });
     
     res.json({ success: true, data: poojas, categories });
@@ -39,7 +39,7 @@ router.get('/admin', auth, async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -47,7 +47,7 @@ router.get('/admin', auth, async (req, res) => {
       filter.category = category;
     }
     
-    const poojas = await Pooja.find(filter).sort({ createdAt: -1 });
+    const poojas = await Pooja.find(filter).populate('services collections').sort({ createdAt: -1 });
     const categories = await Pooja.distinct('category');
     
     res.json({ success: true, data: poojas, categories });
@@ -56,13 +56,34 @@ router.get('/admin', auth, async (req, res) => {
   }
 });
 
+// Get pooja by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const pooja = await Pooja.findById(req.params.id).populate('services collections');
+    if (!pooja) {
+      return res.status(404).json({ success: false, message: 'Pooja not found' });
+    }
+    res.json({ success: true, data: pooja });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Create pooja
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle, category, isActive } = req.body;
+    const { title, description, category, services, collections, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
-    const pooja = new Pooja({ title, subtitle, category, image, isActive });
+    const pooja = new Pooja({ 
+      title, 
+      description, 
+      category, 
+      image, 
+      services: services ? JSON.parse(services) : [],
+      collections: collections ? JSON.parse(collections) : [],
+      isActive 
+    });
     await pooja.save();
     
     res.status(201).json({ success: true, data: pooja });
@@ -74,8 +95,15 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update pooja
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle, category, isActive } = req.body;
-    const updateData = { title, subtitle, category, isActive };
+    const { title, description, category, services, collections, isActive } = req.body;
+    const updateData = { 
+      title, 
+      description, 
+      category, 
+      services: services ? JSON.parse(services) : [],
+      collections: collections ? JSON.parse(collections) : [],
+      isActive 
+    };
     
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;

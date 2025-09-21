@@ -6,7 +6,7 @@ const poojaSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  subtitle: {
+  description: {
     type: String,
     required: true,
     trim: true
@@ -20,6 +20,14 @@ const poojaSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  services: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Service'
+  }],
+  collections: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PoojaCollection'
+  }],
   isActive: {
     type: Boolean,
     default: true

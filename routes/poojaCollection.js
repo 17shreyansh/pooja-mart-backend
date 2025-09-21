@@ -13,8 +13,7 @@ router.get('/', async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle1: { $regex: search, $options: 'i' } },
-        { subtitle2: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -40,8 +39,7 @@ router.get('/admin', auth, async (req, res) => {
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { subtitle1: { $regex: search, $options: 'i' } },
-        { subtitle2: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -58,16 +56,38 @@ router.get('/admin', auth, async (req, res) => {
   }
 });
 
+// Get collection by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const collection = await PoojaCollection.findById(req.params.id);
+    if (!collection) {
+      return res.status(404).json({ success: false, message: 'Collection not found' });
+    }
+    res.json({ success: true, data: collection });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Create pooja collection item
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle1, subtitle2, category, isActive } = req.body;
+    const { title, description, category, price, stock, attributes, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
-    const item = new PoojaCollection({ title, subtitle1, subtitle2, category, image, isActive });
-    await item.save();
+    const collection = new PoojaCollection({ 
+      title, 
+      description, 
+      category, 
+      image, 
+      price,
+      stock: stock || 0,
+      attributes: attributes ? JSON.parse(attributes) : [],
+      isActive 
+    });
+    await collection.save();
     
-    res.status(201).json({ success: true, data: item });
+    res.status(201).json({ success: true, data: collection });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -76,15 +96,23 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update pooja collection item
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, subtitle1, subtitle2, category, isActive } = req.body;
-    const updateData = { title, subtitle1, subtitle2, category, isActive };
+    const { title, description, category, price, stock, attributes, isActive } = req.body;
+    const updateData = { 
+      title, 
+      description, 
+      category, 
+      price,
+      stock: stock || 0,
+      attributes: attributes ? JSON.parse(attributes) : [],
+      isActive 
+    };
     
     if (req.file) {
       updateData.image = `/uploads/${req.file.filename}`;
     }
     
-    const item = await PoojaCollection.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    res.json({ success: true, data: item });
+    const collection = await PoojaCollection.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    res.json({ success: true, data: collection });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

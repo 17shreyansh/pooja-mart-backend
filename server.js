@@ -81,6 +81,7 @@ app.use('/api/pages', require('./routes/pages'));
 app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/offers', require('./routes/offers'));
+app.use('/api/home-page', require('./routes/homePage'));
 
 // Serve admin panel
 app.use(express.static('public'));

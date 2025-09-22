@@ -16,68 +16,89 @@ const User = require('./models/User');
 
 const seedAllData = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('🔗 Connected to MongoDB');
+    // Only connect if not already connected
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('🔗 Connected to MongoDB');
+    }
 
-    // Clear all existing data
-    console.log('🧹 Clearing existing data...');
-    await Promise.all([
-      Category.deleteMany({}),
-      Service.deleteMany({}),
-      PoojaCollection.deleteMany({}),
-      Pooja.deleteMany({}),
-      HomePage.deleteMany({}),
-      Offer.deleteMany({}),
-      Page.deleteMany({}),
-      FAQ.deleteMany({}),
-      Testimonial.deleteMany({}),
-      User.deleteMany({})
-    ]);
+    // In production, check if data already exists
+    const categoryCount = await Category.countDocuments();
+    if (categoryCount > 0) {
+      console.log('✅ Data already exists, skipping seed');
+      return;
+    }
+
+    // Clear existing data only if forced
+    if (process.env.FORCE_SEED === 'true') {
+      console.log('🧹 Force clearing existing data...');
+      await Promise.all([
+        Category.deleteMany({}),
+        Service.deleteMany({}),
+        PoojaCollection.deleteMany({}),
+        Pooja.deleteMany({}),
+        HomePage.deleteMany({}),
+        Offer.deleteMany({}),
+        Page.deleteMany({}),
+        FAQ.deleteMany({}),
+        Testimonial.deleteMany({}),
+        User.deleteMany({})
+      ]);
+    }
 
     // 1. Create Categories
     console.log('📂 Creating categories...');
-    const categories = await Category.insertMany([
+    const categoryData = [
       {
         name: 'Festival',
+        slug: 'festival',
         description: 'Festival celebrations and special occasion poojas',
         image: '/uploads/category-festival.jpg'
       },
       {
         name: 'Special Occasion',
+        slug: 'special-occasion',
         description: 'Special life events and milestone celebrations',
         image: '/uploads/category-special.jpg'
       },
       {
         name: 'Daily Worship',
+        slug: 'daily-worship',
         description: 'Daily pooja and worship essentials',
         image: '/uploads/category-daily.jpg'
       },
       {
         name: 'Priest Services',
+        slug: 'priest-services',
         description: 'Experienced pandit services for all ceremonies',
         image: '/uploads/category-priest.jpg'
       },
       {
         name: 'Decoration',
+        slug: 'decoration',
         description: 'Traditional decoration services for festivals',
         image: '/uploads/category-decoration.jpg'
       },
       {
         name: 'Catering',
+        slug: 'catering',
         description: 'Vegetarian catering for religious ceremonies',
         image: '/uploads/category-catering.jpg'
       },
       {
         name: 'Photography',
+        slug: 'photography',
         description: 'Professional photography for religious events',
         image: '/uploads/category-photography.jpg'
       },
       {
         name: 'Festival Kits',
+        slug: 'festival-kits',
         description: 'Complete festival celebration packages',
         image: '/uploads/category-kits.jpg'
       }
-    ]);
+    ];
+    const categories = await Category.insertMany(categoryData);
 
     // 2. Create Services
     console.log('🛎️ Creating services...');
@@ -523,10 +544,17 @@ const seedAllData = async () => {
     console.log(`   Testimonials: 3`);
     console.log(`   Test User: 1`);
     
-    process.exit(0);
+    // Only exit if running as standalone script
+    if (require.main === module) {
+      process.exit(0);
+    }
   } catch (error) {
     console.error('❌ Seeding failed:', error);
-    process.exit(1);
+    // Only exit if running as standalone script
+    if (require.main === module) {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 

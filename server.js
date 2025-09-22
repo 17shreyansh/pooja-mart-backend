@@ -9,6 +9,11 @@ require('dotenv').config();
 
 const app = express();
 
+// Trust proxy for production deployment
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security middleware with CORS-friendly helmet config
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -19,12 +24,19 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting with proper configuration
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting for admin panel static files
+    return req.path.startsWith('/admin') && !req.path.startsWith('/api');
+  }
 });
-// app.use('/api/', limiter);
+app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -50,21 +62,35 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('MongoDB connected successfully');
     
     try {
-      // Auto-seed data on startup
-      const seedAllData = require('./seed');
-      
-      // Check if data already exists
-      const Admin = require('./models/Admin');
-      const Category = require('./models/Category');
-      
-      const adminCount = await Admin.countDocuments();
-      const categoryCount = await Category.countDocuments();
-      
-      if (adminCount === 0 || categoryCount === 0) {
-        console.log('🌱 No data found, seeding database...');
-        await seedAllData();
+      // Auto-seed data on startup (only in development or when forced)
+      if (process.env.NODE_ENV !== 'production' || process.env.FORCE_SEED === 'true') {
+        const seedAllData = require('./seed');
+        
+        // Check if data already exists
+        const Admin = require('./models/Admin');
+        const Category = require('./models/Category');
+        
+        const adminCount = await Admin.countDocuments();
+        const categoryCount = await Category.countDocuments();
+        
+        if (adminCount === 0 || categoryCount === 0) {
+          console.log('🌱 No data found, seeding database...');
+          await seedAllData();
+        } else {
+          console.log('✅ Database already contains data');
+        }
       } else {
-        console.log('✅ Database already contains data');
+        // In production, just ensure admin exists
+        const adminExists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
+        if (!adminExists) {
+          const admin = new Admin({
+            email: process.env.ADMIN_EMAIL,
+            password: process.env.ADMIN_PASSWORD,
+            name: 'Admin'
+          });
+          await admin.save();
+          console.log('Default admin created');
+        }
       }
     } catch (error) {
       console.error('Error during startup:', error.message);
@@ -97,6 +123,12 @@ app.get('/admin/*', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  // Handle rate limit errors gracefully
+  if (err.code === 'ERR_ERL_UNEXPECTED_X_FORWARDED_FOR') {
+    console.warn('Rate limit warning:', err.message);
+    return next(); // Continue without rate limiting
+  }
+  
   console.error(err.stack);
   res.status(500).json({ 
     success: false, 

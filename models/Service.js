@@ -17,9 +17,9 @@ const serviceSchema = new mongoose.Schema({
     trim: true
   },
   category: {
-    type: String,
-    required: true,
-    trim: true
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
   },
   image: {
     type: String,

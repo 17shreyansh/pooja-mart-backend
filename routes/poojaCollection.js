@@ -21,8 +21,9 @@ router.get('/', async (req, res) => {
       filter.category = category;
     }
     
-    const items = await PoojaCollection.find(filter).sort({ createdAt: -1 });
-    const categories = await PoojaCollection.distinct('category', { isActive: true });
+    const items = await PoojaCollection.find(filter).populate('category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find({ isActive: true }).select('name slug');
     
     res.json({ success: true, data: items, categories });
   } catch (error) {
@@ -47,8 +48,9 @@ router.get('/admin', auth, async (req, res) => {
       filter.category = category;
     }
     
-    const items = await PoojaCollection.find(filter).sort({ createdAt: -1 });
-    const categories = await PoojaCollection.distinct('category');
+    const items = await PoojaCollection.find(filter).populate('category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find().select('name slug');
     
     res.json({ success: true, data: items, categories });
   } catch (error) {
@@ -59,7 +61,7 @@ router.get('/admin', auth, async (req, res) => {
 // Get collection by slug (must be before /:id route)
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const collection = await PoojaCollection.findOne({ slug: req.params.slug, isActive: true });
+    const collection = await PoojaCollection.findOne({ slug: req.params.slug, isActive: true }).populate('category');
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
     }
@@ -76,7 +78,7 @@ router.get('/slug/:slug', async (req, res) => {
 // Get collection by ID
 router.get('/:id', async (req, res) => {
   try {
-    const collection = await PoojaCollection.findById(req.params.id);
+    const collection = await PoojaCollection.findById(req.params.id).populate('category');
     if (!collection) {
       return res.status(404).json({ success: false, message: 'Collection not found' });
     }

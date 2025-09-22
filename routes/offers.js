@@ -28,51 +28,15 @@ const upload = multer({
   }
 });
 
-// Get active offers for public (slider and popup)
+// Get active offers for public
 router.get('/', async (req, res) => {
   try {
-    const now = new Date();
-    const offers = await Offer.find({
-      isActive: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    }).sort({ priority: -1, createdAt: -1 });
-
+    const { type } = req.query;
+    const query = { isActive: true };
+    if (type) query.offerType = type;
+    
+    const offers = await Offer.find(query).sort({ createdAt: -1 });
     res.json({ success: true, offers });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get slider offers
-router.get('/slider', async (req, res) => {
-  try {
-    const now = new Date();
-    const offers = await Offer.find({
-      isActive: true,
-      showInSlider: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    }).sort({ priority: -1, createdAt: -1 });
-
-    res.json({ success: true, offers });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Get popup offers
-router.get('/popup', async (req, res) => {
-  try {
-    const now = new Date();
-    const offers = await Offer.find({
-      isActive: true,
-      showInPopup: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now }
-    }).sort({ priority: -1, createdAt: -1 }).limit(1);
-
-    res.json({ success: true, offer: offers[0] || null });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -115,8 +79,6 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
     const offerData = {
       ...req.body,
       image: req.file ? `/uploads/${req.file.filename}` : undefined,
-      showInSlider: req.body.showInSlider === 'true',
-      showInPopup: req.body.showInPopup === 'true',
       isActive: req.body.isActive !== 'false'
     };
 
@@ -134,8 +96,6 @@ router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
     const updateData = {
       ...req.body,
-      showInSlider: req.body.showInSlider === 'true',
-      showInPopup: req.body.showInPopup === 'true',
       isActive: req.body.isActive !== 'false'
     };
 

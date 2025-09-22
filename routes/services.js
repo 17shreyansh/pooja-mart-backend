@@ -21,8 +21,9 @@ router.get('/', async (req, res) => {
       filter.category = category;
     }
     
-    const services = await Service.find(filter).sort({ createdAt: -1 });
-    const categories = await Service.distinct('category', { isActive: true });
+    const services = await Service.find(filter).populate('category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find({ isActive: true }).select('name slug');
     
     res.json({ success: true, data: services, categories });
   } catch (error) {
@@ -47,8 +48,9 @@ router.get('/admin', auth, async (req, res) => {
       filter.category = category;
     }
     
-    const services = await Service.find(filter).sort({ createdAt: -1 });
-    const categories = await Service.distinct('category');
+    const services = await Service.find(filter).populate('category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find().select('name slug');
     
     res.json({ success: true, data: services, categories });
   } catch (error) {
@@ -59,7 +61,7 @@ router.get('/admin', auth, async (req, res) => {
 // Get service by slug (must be before /:id route)
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const service = await Service.findOne({ slug: req.params.slug, isActive: true });
+    const service = await Service.findOne({ slug: req.params.slug, isActive: true }).populate('category');
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -76,7 +78,7 @@ router.get('/slug/:slug', async (req, res) => {
 // Get service by ID
 router.get('/:id', async (req, res) => {
   try {
-    const service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id).populate('category');
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }

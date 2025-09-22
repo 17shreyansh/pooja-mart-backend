@@ -24,7 +24,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
-app.use('/api/', limiter);
+// app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -50,19 +50,24 @@ mongoose.connect(process.env.MONGODB_URI)
     console.log('MongoDB connected successfully');
     
     try {
-      // Create default admin if not exists
-      const adminExists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
-      if (!adminExists) {
-        const admin = new Admin({
-          email: process.env.ADMIN_EMAIL,
-          password: process.env.ADMIN_PASSWORD,
-          name: 'Admin'
-        });
-        await admin.save();
-        console.log('Default admin created');
+      // Auto-seed data on startup
+      const seedAllData = require('./seed');
+      
+      // Check if data already exists
+      const Admin = require('./models/Admin');
+      const Category = require('./models/Category');
+      
+      const adminCount = await Admin.countDocuments();
+      const categoryCount = await Category.countDocuments();
+      
+      if (adminCount === 0 || categoryCount === 0) {
+        console.log('🌱 No data found, seeding database...');
+        await seedAllData();
+      } else {
+        console.log('✅ Database already contains data');
       }
     } catch (error) {
-      console.error('Error creating default admin:', error.message);
+      console.error('Error during startup:', error.message);
     }
   })
   .catch(err => console.error('MongoDB connection error:', err));
@@ -82,6 +87,7 @@ app.use('/api/newsletter', require('./routes/newsletter'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/offers', require('./routes/offers'));
 app.use('/api/home-page', require('./routes/homePage'));
+app.use('/api/categories', require('./routes/categories'));
 
 // Serve admin panel
 app.use(express.static('public'));

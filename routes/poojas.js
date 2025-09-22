@@ -21,8 +21,9 @@ router.get('/', async (req, res) => {
       filter.category = category;
     }
     
-    const poojas = await Pooja.find(filter).populate('services collections').sort({ createdAt: -1 });
-    const categories = await Pooja.distinct('category', { isActive: true });
+    const poojas = await Pooja.find(filter).populate('services collections category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find({ isActive: true }).select('name slug');
     
     res.json({ success: true, data: poojas, categories });
   } catch (error) {
@@ -47,8 +48,9 @@ router.get('/admin', auth, async (req, res) => {
       filter.category = category;
     }
     
-    const poojas = await Pooja.find(filter).populate('services collections').sort({ createdAt: -1 });
-    const categories = await Pooja.distinct('category');
+    const poojas = await Pooja.find(filter).populate('services collections category').sort({ createdAt: -1 });
+    const Category = require('../models/Category');
+    const categories = await Category.find().select('name slug');
     
     res.json({ success: true, data: poojas, categories });
   } catch (error) {
@@ -60,7 +62,7 @@ router.get('/admin', auth, async (req, res) => {
 router.get('/slug/:slug', async (req, res) => {
   try {
     const pooja = await Pooja.findOne({ slug: req.params.slug, isActive: true })
-      .populate('services collections');
+      .populate('services collections category');
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
     }
@@ -78,7 +80,7 @@ router.get('/slug/:slug', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const pooja = await Pooja.findById(req.params.id)
-      .populate('services collections');
+      .populate('services collections category');
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
     }

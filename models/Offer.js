@@ -15,47 +15,20 @@ const offerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  offerType: {
+    type: String,
+    required: true,
+    enum: ['pooja', 'service', 'collection'],
+    lowercase: true
+  },
   discountPercentage: {
     type: Number,
     min: 0,
     max: 100
   },
-  offerCode: {
-    type: String,
-    trim: true,
-    uppercase: true
-  },
-  startDate: {
-    type: Date,
-    required: true
-  },
-  endDate: {
-    type: Date,
-    required: true
-  },
   isActive: {
     type: Boolean,
     default: true
-  },
-  showInSlider: {
-    type: Boolean,
-    default: true
-  },
-  showInPopup: {
-    type: Boolean,
-    default: false
-  },
-  priority: {
-    type: Number,
-    default: 0
-  },
-  buttonText: {
-    type: String,
-    default: 'Book Now'
-  },
-  buttonLink: {
-    type: String,
-    default: '/services'
   }
 }, {
   timestamps: true

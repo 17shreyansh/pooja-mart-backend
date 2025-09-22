@@ -42,6 +42,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get slider offers for homepage
+router.get('/slider', async (req, res) => {
+  try {
+    // First try to get offers with showInSlider: true, fallback to all active offers
+    let offers = await Offer.find({ isActive: true, showInSlider: true }).sort({ createdAt: -1 }).limit(5);
+    if (offers.length === 0) {
+      offers = await Offer.find({ isActive: true }).sort({ createdAt: -1 }).limit(5);
+    }
+    res.json({ success: true, offers });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Admin routes (protected)
 router.get('/admin', auth, async (req, res) => {
   try {

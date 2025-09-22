@@ -26,6 +26,22 @@ const offerSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  offerCode: {
+    type: String,
+    trim: true
+  },
+  buttonText: {
+    type: String,
+    default: 'Book Now'
+  },
+  buttonLink: {
+    type: String,
+    default: '/contact'
+  },
+  showInSlider: {
+    type: Boolean,
+    default: false
+  },
   isActive: {
     type: Boolean,
     default: true

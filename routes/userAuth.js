@@ -1,49 +1,120 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { sendOTPEmail } = require('../services/emailService');
 const router = express.Router();
 
-// User registration
-router.post('/register', async (req, res) => {
+// Send OTP for email verification
+router.post('/send-otp', async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { email } = req.body;
     
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
     }
     
-    const user = new User({ name, email, password, phone });
+    let user = await User.findOne({ email });
+    
+    if (!user) {
+      user = new User({ email });
+    }
+    
+    const otp = user.generateOTP();
     await user.save();
     
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    await sendOTPEmail(email, otp);
     
-    res.status(201).json({
+    res.json({
       success: true,
-      token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
+      message: 'OTP sent to your email',
+      email: email
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// User login
-router.post('/login', async (req, res) => {
+// Verify OTP and complete registration
+router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, otp } = req.body;
     
-    const user = await User.findOne({ email, isActive: true });
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'User not found' });
     }
+    
+    if (!user.verifyOTP(otp)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+    
+    user.isEmailVerified = true;
+    user.emailVerificationOTP = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
     
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     
     res.json({
       success: true,
       token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
+      user: { id: user._id, email: user.email },
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// User login with OTP
+router.post('/login', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    const user = await User.findOne({ email, isActive: true, isEmailVerified: true });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found or not verified' });
+    }
+    
+    const otp = user.generateOTP();
+    await user.save();
+    
+    await sendOTPEmail(email, otp);
+    
+    res.json({
+      success: true,
+      message: 'OTP sent to your email',
+      email: email
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Verify login OTP
+router.post('/verify-login-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    
+    const user = await User.findOne({ email, isActive: true, isEmailVerified: true });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+    
+    if (!user.verifyOTP(otp)) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+    
+    user.emailVerificationOTP = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+    
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, email: user.email }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -71,30 +142,6 @@ router.get('/verify', async (req, res) => {
   }
 });
 
-// Change password
-router.put('/change-password', async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'No token provided' });
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
-    
-    const { currentPassword, newPassword } = req.body;
-    
-    if (!(await user.comparePassword(currentPassword))) {
-      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
-    }
-    
-    user.password = newPassword;
-    await user.save();
-    
-    res.json({ success: true, message: 'Password changed successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+
 
 module.exports = router;

@@ -37,6 +37,50 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get categories by type with items count
+router.get('/by-type/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    let Model;
+    
+    switch (type) {
+      case 'pooja':
+        Model = require('../models/Pooja');
+        break;
+      case 'service':
+        Model = require('../models/Service');
+        break;
+      case 'collections':
+        Model = require('../models/PoojaCollection');
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid type' });
+    }
+    
+    const items = await Model.find({ isActive: true }).populate('category');
+    const categoryMap = new Map();
+    
+    items.forEach(item => {
+      if (item.category) {
+        const catName = item.category.name;
+        if (!categoryMap.has(catName)) {
+          categoryMap.set(catName, {
+            name: catName,
+            slug: item.category.slug,
+            count: 0
+          });
+        }
+        categoryMap.get(catName).count++;
+      }
+    });
+    
+    const categories = Array.from(categoryMap.values());
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get all categories for admin (including inactive)
 router.get('/admin', auth, async (req, res) => {
   try {

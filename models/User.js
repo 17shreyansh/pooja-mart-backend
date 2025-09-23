@@ -2,11 +2,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
   email: {
     type: String,
     required: true,
@@ -14,14 +9,15 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
+  isEmailVerified: {
+    type: Boolean,
+    default: false
   },
-  phone: {
-    type: String,
-    trim: true
+  emailVerificationOTP: {
+    type: String
+  },
+  otpExpiry: {
+    type: Date
   },
   isActive: {
     type: Boolean,
@@ -31,14 +27,15 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
-});
+userSchema.methods.generateOTP = function() {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  this.emailVerificationOTP = otp;
+  this.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  return otp;
+};
 
-userSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
+userSchema.methods.verifyOTP = function(otp) {
+  return this.emailVerificationOTP === otp && this.otpExpiry > new Date();
 };
 
 userSchema.index({ email: 1 });

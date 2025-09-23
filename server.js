@@ -36,7 +36,7 @@ const limiter = rateLimit({
     return req.path.startsWith('/admin') && !req.path.startsWith('/api');
   }
 });
-app.use('/api/', limiter);
+// app.use('/api/', limiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));

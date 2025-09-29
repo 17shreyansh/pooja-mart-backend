@@ -114,6 +114,7 @@ app.use('/api/search', require('./routes/search'));
 app.use('/api/offers', require('./routes/offers'));
 app.use('/api/home-page', require('./routes/homePage'));
 app.use('/api/categories', require('./routes/categories'));
+app.use('/api/settings', require('./routes/settings'));
 
 // Serve admin panel
 app.use(express.static('public'));

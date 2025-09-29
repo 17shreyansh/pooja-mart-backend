@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const serviceSchema = new mongoose.Schema({
-  title: {
+  name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    unique: true
   },
   slug: {
     type: String,
@@ -16,35 +17,10 @@ const serviceSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  category: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
-    required: true
-  },
   image: {
     type: String,
     required: true
   },
-  price: {
-    type: Number,
-    required: true
-  },
-  faqs: [{
-    question: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    answer: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    order: {
-      type: Number,
-      default: 0
-    }
-  }],
   isActive: {
     type: Boolean,
     default: true
@@ -53,10 +29,10 @@ const serviceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate slug from title before saving
+// Generate slug from name before saving
 serviceSchema.pre('save', function(next) {
-  if (this.isModified('title') || this.isNew) {
-    this.slug = this.title.toLowerCase()
+  if (this.isModified('name') || this.isNew) {
+    this.slug = this.name.toLowerCase()
       .replace(/[^a-z0-9 -]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
@@ -65,6 +41,6 @@ serviceSchema.pre('save', function(next) {
   next();
 });
 
-serviceSchema.index({ title: 1, category: 1, isActive: 1 });
+serviceSchema.index({ name: 1, isActive: 1 });
 
 module.exports = mongoose.model('Service', serviceSchema);

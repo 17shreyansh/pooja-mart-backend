@@ -13,6 +13,7 @@ const Page = require('./models/Page');
 const FAQ = require('./models/FAQ');
 const Testimonial = require('./models/Testimonial');
 const User = require('./models/User');
+const City = require('./models/City');
 
 const seedAllData = async () => {
   try {
@@ -22,11 +23,13 @@ const seedAllData = async () => {
       console.log('🔗 Connected to MongoDB');
     }
 
-    // In production, check if data already exists
-    const categoryCount = await Category.countDocuments();
-    if (categoryCount > 0) {
-      console.log('✅ Data already exists, skipping seed');
-      return;
+    // In production, check if data already exists (skip if FORCE_SEED is true)
+    if (process.env.FORCE_SEED !== 'true') {
+      const categoryCount = await Category.countDocuments();
+      if (categoryCount > 0) {
+        console.log('✅ Data already exists, skipping seed');
+        return;
+      }
     }
 
     // Clear existing data only if forced
@@ -42,7 +45,8 @@ const seedAllData = async () => {
         Page.deleteMany({}),
         FAQ.deleteMany({}),
         Testimonial.deleteMany({}),
-        User.deleteMany({})
+        User.deleteMany({}),
+        City.deleteMany({})
       ]);
     }
 
@@ -100,7 +104,22 @@ const seedAllData = async () => {
     ];
     const categories = await Category.insertMany(categoryData);
 
-    // 2. Create Services
+    // 2. Create Cities
+    console.log('🏙️ Creating cities...');
+    const cities = await City.insertMany([
+      { name: 'Mumbai', state: 'Maharashtra', isActive: true },
+      { name: 'Delhi', state: 'Delhi', isActive: true },
+      { name: 'Bangalore', state: 'Karnataka', isActive: true },
+      { name: 'Hyderabad', state: 'Telangana', isActive: true },
+      { name: 'Chennai', state: 'Tamil Nadu', isActive: true },
+      { name: 'Kolkata', state: 'West Bengal', isActive: true },
+      { name: 'Pune', state: 'Maharashtra', isActive: true },
+      { name: 'Ahmedabad', state: 'Gujarat', isActive: true },
+      { name: 'Jaipur', state: 'Rajasthan', isActive: true },
+      { name: 'Surat', state: 'Gujarat', isActive: true }
+    ]);
+
+    // 3. Create Services
     console.log('🛎️ Creating services...');
     const services = await Service.insertMany([
       {
@@ -133,7 +152,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 3. Create Collections
+    // 4. Create Collections
     console.log('📦 Creating collections...');
     const collections = await PoojaCollection.insertMany([
       {
@@ -180,13 +199,14 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 4. Create Poojas
+    // 5. Create Poojas
     console.log('🕉️ Creating poojas...');
     const poojas = await Pooja.insertMany([
       {
         title: 'Ganesh Chaturthi Celebration',
         description: 'Complete Ganesh Chaturthi celebration with traditional rituals, mantras, and ceremonies. Includes Ganesh sthapana, daily aarti, and visarjan ceremony.',
-        category: categories.find(c => c.name === 'Festival')._id,
+        service: services[0]._id,
+        cities: [cities[0]._id, cities[1]._id, cities[2]._id],
         packages: [
           {
             name: 'Basic Package',
@@ -208,7 +228,8 @@ const seedAllData = async () => {
       {
         title: 'Lakshmi Pooja',
         description: 'Traditional Lakshmi pooja for prosperity and wealth. Perfect for Diwali or any auspicious occasion to invite goddess Lakshmi into your home.',
-        category: categories.find(c => c.name === 'Festival')._id,
+        service: services[0]._id,
+        cities: [cities[0]._id, cities[1]._id, cities[3]._id, cities[4]._id],
         packages: [
           {
             name: 'Standard Package',
@@ -230,7 +251,8 @@ const seedAllData = async () => {
       {
         title: 'Griha Pravesh Pooja',
         description: 'Auspicious house warming ceremony to purify and bless your new home. Includes Vastu pooja and Ganesh sthapana for positive energy.',
-        category: categories.find(c => c.name === 'Special Occasion')._id,
+        service: services[0]._id,
+        cities: [cities[0]._id, cities[2]._id, cities[6]._id],
         packages: [
           {
             name: 'Essential Package',
@@ -252,7 +274,8 @@ const seedAllData = async () => {
       {
         title: 'Satyanarayan Pooja',
         description: 'Sacred Satyanarayan Katha and pooja for fulfillment of wishes and removal of obstacles. Includes prasadam preparation and distribution.',
-        category: categories.find(c => c.name === 'Special Occasion')._id,
+        service: services[0]._id,
+        cities: [cities[1]._id, cities[3]._id, cities[5]._id],
         packages: [
           {
             name: 'Traditional Package',
@@ -267,7 +290,8 @@ const seedAllData = async () => {
       {
         title: 'Navratri Celebration',
         description: 'Nine-day Navratri celebration with daily aarti, bhajans, and special rituals for Goddess Durga. Includes all nine forms worship.',
-        category: categories.find(c => c.name === 'Festival')._id,
+        service: services[0]._id,
+        cities: [cities[7]._id, cities[8]._id, cities[9]._id],
         packages: [
           {
             name: 'Daily Aarti Package',
@@ -289,7 +313,8 @@ const seedAllData = async () => {
       {
         title: 'Karva Chauth Pooja',
         description: 'Traditional Karva Chauth fast and pooja for married women. Includes moon sighting ritual and fast-breaking ceremony.',
-        category: categories.find(c => c.name === 'Special Occasion')._id,
+        service: services[0]._id,
+        cities: [cities[0]._id, cities[1]._id, cities[6]._id, cities[8]._id],
         packages: [
           {
             name: 'Traditional Package',
@@ -303,7 +328,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 5. Create Home Page Data
+    // 6. Create Home Page Data
     console.log('🏠 Creating home page data...');
     await HomePage.insertMany([
       {
@@ -359,7 +384,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 6. Create Offers
+    // 7. Create Offers
     console.log('🎁 Creating offers...');
     await Offer.insertMany([
       {
@@ -409,7 +434,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 7. Create Pages
+    // 8. Create Pages
     console.log('📄 Creating pages...');
     await Page.insertMany([
       {
@@ -438,7 +463,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 8. Create FAQs
+    // 9. Create FAQs
     console.log('❓ Creating FAQs...');
     await FAQ.insertMany([
       {
@@ -479,7 +504,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 9. Create Test User and Testimonials
+    // 10. Create Test User and Testimonials
     console.log('👤 Creating test user and testimonials...');
     const testUser = await User.create({
       name: 'Priya Sharma',
@@ -517,7 +542,7 @@ const seedAllData = async () => {
       }
     ]);
 
-    // 10. Create Admin (if not exists)
+    // 11. Create Admin (if not exists)
     console.log('👨‍💼 Creating admin...');
     const adminExists = await Admin.findOne({ email: process.env.ADMIN_EMAIL });
     if (!adminExists) {
@@ -534,6 +559,7 @@ const seedAllData = async () => {
     console.log('\n🎉 All data seeded successfully!');
     console.log(`📊 Summary:`);
     console.log(`   Categories: ${categories.length}`);
+    console.log(`   Cities: ${cities.length}`);
     console.log(`   Services: ${services.length}`);
     console.log(`   Collections: ${collections.length}`);
     console.log(`   Poojas: ${poojas.length}`);

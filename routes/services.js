@@ -4,28 +4,22 @@ const auth = require('../middleware/auth');
 const upload = require('../config/multer');
 const router = express.Router();
 
-// Get all services
+// Get all services (now acting as categories)
 router.get('/', async (req, res) => {
   try {
-    const { search, category } = req.query;
+    const { search } = req.query;
     const filter = { isActive: true };
     
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
       ];
     }
     
-    if (category) {
-      filter.category = category;
-    }
+    const services = await Service.find(filter).sort({ createdAt: -1 });
     
-    const services = await Service.find(filter).populate('category').sort({ createdAt: -1 });
-    const Category = require('../models/Category');
-    const categories = await Category.find({ isActive: true }).select('name slug');
-    
-    res.json({ success: true, data: services, categories });
+    res.json({ success: true, data: services });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -34,25 +28,19 @@ router.get('/', async (req, res) => {
 // Get all services (admin)
 router.get('/admin', auth, async (req, res) => {
   try {
-    const { search, category } = req.query;
+    const { search } = req.query;
     const filter = {};
     
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } }
       ];
     }
     
-    if (category) {
-      filter.category = category;
-    }
+    const services = await Service.find(filter).sort({ createdAt: -1 });
     
-    const services = await Service.find(filter).populate('category').sort({ createdAt: -1 });
-    const Category = require('../models/Category');
-    const categories = await Category.find().select('name slug');
-    
-    res.json({ success: true, data: services, categories });
+    res.json({ success: true, data: services });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -61,13 +49,9 @@ router.get('/admin', auth, async (req, res) => {
 // Get service by slug (must be before /:id route)
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const service = await Service.findOne({ slug: req.params.slug, isActive: true }).populate('category');
+    const service = await Service.findOne({ slug: req.params.slug, isActive: true });
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-    // Sort FAQs by order
-    if (service.faqs && service.faqs.length > 0) {
-      service.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: service });
   } catch (error) {
@@ -78,13 +62,9 @@ router.get('/slug/:slug', async (req, res) => {
 // Get service by ID
 router.get('/:id', async (req, res) => {
   try {
-    const service = await Service.findById(req.params.id).populate('category');
+    const service = await Service.findById(req.params.id);
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-    // Sort FAQs by order
-    if (service.faqs && service.faqs.length > 0) {
-      service.faqs.sort((a, b) => a.order - b.order);
     }
     res.json({ success: true, data: service });
   } catch (error) {
@@ -95,16 +75,13 @@ router.get('/:id', async (req, res) => {
 // Create service
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, faqs, isActive } = req.body;
+    const { name, description, isActive } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
     
     const service = new Service({ 
-      title, 
+      name, 
       description, 
-      category, 
       image, 
-      price, 
-      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     });
     await service.save();
@@ -118,13 +95,10 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 // Update service
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, price, faqs, isActive } = req.body;
+    const { name, description, isActive } = req.body;
     const updateData = { 
-      title, 
+      name, 
       description, 
-      category, 
-      price, 
-      faqs: faqs ? JSON.parse(faqs) : [],
       isActive 
     };
     

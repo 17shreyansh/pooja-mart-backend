@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all poojas
 router.get('/', async (req, res) => {
   try {
-    const { search, category } = req.query;
+    const { search, service, city } = req.query;
     const filter = { isActive: true };
     
     if (search) {
@@ -17,15 +17,26 @@ router.get('/', async (req, res) => {
       ];
     }
     
-    if (category) {
-      filter.category = category;
+    if (service) {
+      filter.service = service;
     }
     
-    const poojas = await Pooja.find(filter).populate('services collections category').sort({ createdAt: -1 });
-    const Category = require('../models/Category');
-    const categories = await Category.find({ isActive: true }).select('name slug');
+    if (city) {
+      filter.cities = city;
+    }
     
-    res.json({ success: true, data: poojas, categories });
+    const poojas = await Pooja.find(filter)
+      .populate('service')
+      .populate('cities')
+      .populate({
+        path: 'packages.collections',
+        model: 'PoojaCollection'
+      })
+      .sort({ createdAt: -1 });
+    const Service = require('../models/Service');
+    const services = await Service.find({ isActive: true }).select('name slug image');
+    
+    res.json({ success: true, data: poojas, services });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -34,7 +45,7 @@ router.get('/', async (req, res) => {
 // Get all poojas (admin)
 router.get('/admin', auth, async (req, res) => {
   try {
-    const { search, category } = req.query;
+    const { search, service } = req.query;
     const filter = {};
     
     if (search) {
@@ -44,15 +55,22 @@ router.get('/admin', auth, async (req, res) => {
       ];
     }
     
-    if (category) {
-      filter.category = category;
+    if (service) {
+      filter.service = service;
     }
     
-    const poojas = await Pooja.find(filter).populate('services collections category').sort({ createdAt: -1 });
-    const Category = require('../models/Category');
-    const categories = await Category.find().select('name slug');
+    const poojas = await Pooja.find(filter)
+      .populate('service')
+      .populate('cities')
+      .populate({
+        path: 'packages.collections',
+        model: 'PoojaCollection'
+      })
+      .sort({ createdAt: -1 });
+    const Service = require('../models/Service');
+    const services = await Service.find().select('name slug image');
     
-    res.json({ success: true, data: poojas, categories });
+    res.json({ success: true, data: poojas, services });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -62,7 +80,12 @@ router.get('/admin', auth, async (req, res) => {
 router.get('/slug/:slug', async (req, res) => {
   try {
     const pooja = await Pooja.findOne({ slug: req.params.slug, isActive: true })
-      .populate('services collections category');
+      .populate('service')
+      .populate('cities')
+      .populate({
+        path: 'packages.collections',
+        model: 'PoojaCollection'
+      });
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
     }
@@ -80,7 +103,12 @@ router.get('/slug/:slug', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const pooja = await Pooja.findById(req.params.id)
-      .populate('services collections category');
+      .populate('service')
+      .populate('cities')
+      .populate({
+        path: 'packages.collections',
+        model: 'PoojaCollection'
+      });
     if (!pooja) {
       return res.status(404).json({ success: false, message: 'Pooja not found' });
     }
@@ -95,19 +123,21 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create pooja
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'showcaseImages', maxCount: 10 }]), async (req, res) => {
   try {
-    const { title, description, category, services, collections, faqs, isActive } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : '';
+    const { title, description, service, packages, faqs, cities, isActive } = req.body;
+    const image = req.files?.image?.[0] ? `/uploads/${req.files.image[0].filename}` : '';
+    const showcaseImages = req.files?.showcaseImages ? req.files.showcaseImages.map(file => `/uploads/${file.filename}`) : [];
     
     const pooja = new Pooja({ 
       title, 
       description, 
-      category, 
+      service, 
       image, 
-      services: services ? JSON.parse(services) : [],
-      collections: collections ? JSON.parse(collections) : [],
+      showcaseImages,
+      packages: packages ? JSON.parse(packages) : [],
       faqs: faqs ? JSON.parse(faqs) : [],
+      cities: cities ? JSON.parse(cities) : [],
       isActive 
     });
     await pooja.save();
@@ -119,21 +149,25 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
 });
 
 // Update pooja
-router.put('/:id', auth, upload.single('image'), async (req, res) => {
+router.put('/:id', auth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'showcaseImages', maxCount: 10 }]), async (req, res) => {
   try {
-    const { title, description, category, services, collections, faqs, isActive } = req.body;
+    const { title, description, service, packages, faqs, cities, isActive } = req.body;
     const updateData = { 
       title, 
       description, 
-      category, 
-      services: services ? JSON.parse(services) : [],
-      collections: collections ? JSON.parse(collections) : [],
+      service, 
+      packages: packages ? JSON.parse(packages) : [],
       faqs: faqs ? JSON.parse(faqs) : [],
+      cities: cities ? JSON.parse(cities) : [],
       isActive 
     };
     
-    if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+    if (req.files?.image?.[0]) {
+      updateData.image = `/uploads/${req.files.image[0].filename}`;
+    }
+    
+    if (req.files?.showcaseImages) {
+      updateData.showcaseImages = req.files.showcaseImages.map(file => `/uploads/${file.filename}`);
     }
     
     const pooja = await Pooja.findByIdAndUpdate(req.params.id, updateData, { new: true });

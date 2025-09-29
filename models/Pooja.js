@@ -16,22 +16,46 @@ const poojaSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  category: {
+  service: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
+    ref: 'Service',
     required: true
   },
   image: {
     type: String,
     required: true
   },
-  services: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Service'
+  showcaseImages: [{
+    type: String,
+    trim: true
   }],
-  collections: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'PoojaCollection'
+  packages: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    duration: {
+      type: String,
+      trim: true
+    },
+    includes: [{
+      type: String,
+      trim: true
+    }],
+    collections: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PoojaCollection'
+    }]
   }],
   faqs: [{
     question: {
@@ -48,6 +72,10 @@ const poojaSchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
+  }],
+  cities: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'City'
   }],
   isActive: {
     type: Boolean,
@@ -69,6 +97,6 @@ poojaSchema.pre('save', function(next) {
   next();
 });
 
-poojaSchema.index({ title: 1, category: 1, isActive: 1 });
+poojaSchema.index({ title: 1, service: 1, isActive: 1 });
 
 module.exports = mongoose.model('Pooja', poojaSchema);

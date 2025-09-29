@@ -115,6 +115,7 @@ app.use('/api/offers', require('./routes/offers'));
 app.use('/api/home-page', require('./routes/homePage'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/settings', require('./routes/settings'));
+app.use('/api/cities', require('./routes/cities'));
 
 // Serve admin panel
 app.use(express.static('public'));
